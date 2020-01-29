@@ -6,6 +6,7 @@ import eu.druglogics.gitsbe.model.BooleanEquation;
 import eu.druglogics.gitsbe.model.BooleanModel;
 import eu.druglogics.gitsbe.model.GeneralModel;
 import eu.druglogics.gitsbe.util.Logger;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.naming.ConfigurationException;
 import java.io.File;
@@ -15,18 +16,20 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-import static eu.druglogics.gitsbe.util.Util.createDirectory;
-import static eu.druglogics.gitsbe.util.Util.getFileExtension;
+import static eu.druglogics.gitsbe.util.Util.*;
 
 public class BooleanModelGenerator {
 
-	private String networkFile;
-	private String workDirectory;
-	private String attractors;
-	private int verbosity;
-	private Logger logger;
+	public String networkFile;
+	public String resultsDirectory;
+	public String modelsDirectory;
+	public String attractors;
+	public int verbosity;
+	public Logger logger;
 
-	private BooleanModelGenerator() {
+	public BooleanModel model;
+
+	BooleanModelGenerator() {
 		// empty constructor
 	}
 
@@ -36,15 +39,8 @@ public class BooleanModelGenerator {
 		try {
 			modelGenerator.initInputArgs(args);
 			modelGenerator.initLogger();
-
-			BooleanModel booleanModel = modelGenerator.initModel();
-
-			modelGenerator.printTotalNumberOfModels(booleanModel);
-
-			ArrayList<BooleanModel> models = modelGenerator.genModels(booleanModel);
-
-			modelGenerator.calculateModelAttractors(models);
-			modelGenerator.exportModels(models);
+			modelGenerator.initModel();
+			modelGenerator.genModels();
 		} catch (ParameterException parEx) {
 			System.out.println("\nOptions preceded by an asterisk are required.");
 			parEx.getJCommander().setProgramName("eu.druglogics.amblog.BooleanModelGenerator");
@@ -58,7 +54,7 @@ public class BooleanModelGenerator {
 		}
 	}
 
-	private void initInputArgs(String[] args) throws ConfigurationException, ParameterException, IOException {
+	public void initInputArgs(String[] args) throws ConfigurationException, ParameterException, IOException {
 		CommandLineArgs arguments = new CommandLineArgs();
 		JCommander.newBuilder().addObject(arguments).build().parse(args);
 
@@ -69,13 +65,17 @@ public class BooleanModelGenerator {
 		String verbosityLevel = arguments.getVerbosity();
 		verbosity = (verbosityLevel == null) ? 3 : Integer.parseInt(verbosityLevel);
 
-		// infer the input dir from .sif file and create a new work dir
+		// infer the input dir from .sif file and create a new 'results' dir and a 'models' dir where the generated files will be stored
 		String inputDirectory = new File(networkFile).getParent();
 
 		DateFormat dateFormat = new SimpleDateFormat("ddMMyyyy_HHmmss");
 		String dateStr = dateFormat.format(Calendar.getInstance().getTime());
-		workDirectory = new File(inputDirectory + "/results_" + dateStr).getAbsolutePath();
-		createDirectory(workDirectory);
+		resultsDirectory = new File(inputDirectory + "/results_"
+			+ removeExtension(new File(networkFile).getName()) + "_" + dateStr).getAbsolutePath();
+		createDirectory(resultsDirectory);
+
+		modelsDirectory = new File(resultsDirectory + "/models").getAbsolutePath();
+		createDirectory(modelsDirectory);
 
 		attractors = arguments.getAttractors();
 
@@ -86,12 +86,12 @@ public class BooleanModelGenerator {
 		}
 	}
 
-	private void initLogger() throws IOException {
+	public void initLogger() throws IOException {
 		String filenameOutput = "log";
-		logger = new Logger(filenameOutput, workDirectory, verbosity, true);
+		logger = new Logger(filenameOutput, resultsDirectory, verbosity, true);
 	}
 
-	private BooleanModel initModel() throws Exception {
+	public void initModel() throws Exception {
 		GeneralModel generalModel = new GeneralModel(logger);
 
 		generalModel.loadInteractionsFile(networkFile);
@@ -103,70 +103,114 @@ public class BooleanModelGenerator {
 		else
 			attractorTool = "biolqm_trapspaces";
 
-		return new BooleanModel(generalModel, attractorTool, logger);
+		this.model = new BooleanModel(generalModel, attractorTool, logger);
 	}
 
-	private void printTotalNumberOfModels(BooleanModel model) {
-		int count = 0;
+	/**
+	 * Get an {@link ArrayList} of indexes of the boolean equations of the model
+	 * that have link operators (both activators and inhibitors).
+	 */
+	public ArrayList<Integer> getLinkOperatorsIndexes() {
+		ArrayList<Integer> res = new ArrayList<>();
 
+		int index = 0;
 		for (BooleanEquation booleanEquation : model.getBooleanEquations()) {
 			String link = booleanEquation.getLink();
 			if (link.equals("and") || link.equals("or")) {
-				count++;
-			}
-		}
-
-		logger.outputHeader(3, "Total number of models: " + (int) Math.pow(2.0, count));
-	}
-
-	private ArrayList<BooleanModel> genModels(BooleanModel booleanModel) throws Exception {
-		logger.outputHeader(3, "Model Generation");
-		ArrayList<BooleanModel> modelList = new ArrayList<>();
-
-		String baseName = booleanModel.getModelName();
-		int modelNumber = 0;
-		booleanModel.setModelName(baseName + "_" + modelNumber);
-		modelList.add(booleanModel);
-		logger.outputStringMessage(3, "Adding initial model No. " + modelNumber);
-
-		int index = 0;
-		for (BooleanEquation booleanEquation : booleanModel.getBooleanEquations()) {
-			String link = booleanEquation.getLink();
-			if (link.equals("and") || link.equals("or")) {
-				ArrayList<BooleanModel> newModels = new ArrayList<>();
-
-				for (BooleanModel model: modelList) {
-					BooleanModel newModel = new BooleanModel(model, logger);
-					modelNumber++;
-					newModel.setModelName(baseName + "_" + modelNumber);
-					newModel.changeLinkOperator(index);
-					logger.outputStringMessage(3, "Adding model No. " + modelNumber);
-					newModels.add(newModel);
-				}
-
-				modelList.addAll(newModels);
+				res.add(index);
 			}
 			index++;
 		}
 
-		return modelList;
+		return res;
 	}
 
-	private void calculateModelAttractors(ArrayList<BooleanModel> models) throws Exception {
+	public void genModels() throws Exception {
+		logger.outputHeader(3, "Model Generation, Attractor Calculation and Export");
+
+		boolean calculateAttractors = true;
+		if (attractors == null) {
+			calculateAttractors = false;
+			logger.outputStringMessage(3, "Attractors will NOT be calculated for the generated models!");
+		}
+
+		ArrayList<Integer> indexes = getLinkOperatorsIndexes();
+		int numOfModels = (int) Math.pow(2.0, indexes.size());
+
+		logger.outputHeader(3, "Total number of models: " + numOfModels + " ("
+			+ indexes.size() + " equations with link operators)");
+
+		String baseName = model.getModelName();
+		for(int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+			model.setModelName(baseName + "_" + modelNumber);
+
+			logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber);
+
+			String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
+
+			int digitIndex = 0;
+			for(char digit: binaryRes.toCharArray()) {
+				int equationIndex = indexes.get(digitIndex);
+				String link = model.getBooleanEquations().get(equationIndex).getLink();
+				if ((digit == '0') && (link.equals("or")) || (digit == '1') && (link.equals("and"))) {
+					model.changeLinkOperator(equationIndex);
+				}
+				digitIndex++;
+			}
+
+			if (calculateAttractors) {
+				model.resetAttractors();
+				model.calculateAttractors(modelsDirectory);
+			}
+
+			model.exportModelToGitsbeFile(modelsDirectory);
+		}
+	}
+
+	/**
+	 * Find the binary representation of a given decimal <i>number</i>, using the given
+	 * amount of <i>digits</i>.
+	 *
+	 * @param number decimal number
+	 * @param digits number of binary digits
+	 * @return the binary representation
+	 *
+	 */
+	public String getBinaryRepresentation(int number, int digits) throws Exception {
+		// with given digits we can reach up to:
+		int max = (int) Math.pow(2, digits) - 1;
+
+		if ((number > max) || (number < 0) || (digits < 1))
+			throw new Exception("Number is negative or it cannot be represented "
+				+ "with the given number of digits");
+
+		char[] arr = Integer.toBinaryString(number).toCharArray();
+		StringBuilder sb = new StringBuilder();
+		for (Character c : arr) {
+			sb.append(c);
+		}
+
+		// add padding zeros if needed
+		String res = sb.toString();
+		if (res.length() < digits) {
+			res = StringUtils.leftPad(sb.toString(), digits, "0");
+		}
+
+		return res;
+	}
+
+	public void calculateModelAttractors(ArrayList<BooleanModel> models) throws Exception {
 		if (attractors != null) {
 			logger.outputHeader(3, "Attractor calculation");
 
 			for (BooleanModel model : models) {
-				model.calculateAttractors(workDirectory);
+				model.calculateAttractors(resultsDirectory);
 			}
 		}
 	}
 
-	private void exportModels(ArrayList<BooleanModel> models) throws IOException {
+	public void exportModels(ArrayList<BooleanModel> models) throws IOException {
 		logger.outputHeader(3, "Model Export");
-
-		String modelsDirectory = new File(workDirectory + "/models").getAbsolutePath();
-		createDirectory(modelsDirectory, logger);
 
 		for (BooleanModel model : models) {
 			model.exportModelToGitsbeFile(modelsDirectory);
