@@ -1,0 +1,13 @@
+A	->	B
+C	-|	B
+C	->	A
+B	-|	A
+A	-|	C
+B	->	C
+C	->	D
+A	-|	D
+B	->	D
+B	->	E
+A	-|	E
+I	->	C
+k	-|	A
