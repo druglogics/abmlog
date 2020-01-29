@@ -18,18 +18,18 @@ mvn clean install
 
 The below example will generate the models with no calculation of attractors:
 ```
-java -cp target/abmlog-1.0.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
+java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
 ```
 
 The next example will generate the models and calculate the fixpoints (stable states):
 ```
-java -cp target/abmlog-1.0.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
+java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
 ```
 
 The below example will generate the models and calculate the minimal trapspaces):
 ```
-java -cp target/abmlog-1.0.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces
+java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces
 ```
 
-All attractors are caluculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
+All attractors are calculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
 The result models are saved in both **BoolNet** (.bnet) and **Gitsbe** (.gitsbe) formats.
