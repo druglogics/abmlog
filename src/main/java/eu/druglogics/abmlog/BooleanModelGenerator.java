@@ -106,25 +106,6 @@ public class BooleanModelGenerator {
 		this.model = new BooleanModel(generalModel, attractorTool, logger);
 	}
 
-	/**
-	 * Get an {@link ArrayList} of indexes of the boolean equations of the model
-	 * that have link operators (both activators and inhibitors).
-	 */
-	public ArrayList<Integer> getLinkOperatorsIndexes() {
-		ArrayList<Integer> res = new ArrayList<>();
-
-		int index = 0;
-		for (BooleanEquation booleanEquation : model.getBooleanEquations()) {
-			String link = booleanEquation.getLink();
-			if (link.equals("and") || link.equals("or")) {
-				res.add(index);
-			}
-			index++;
-		}
-
-		return res;
-	}
-
 	public void genModels() throws Exception {
 		logger.outputHeader(3, "Model Generation, Attractor Calculation and Export");
 
@@ -168,6 +149,25 @@ public class BooleanModelGenerator {
 	}
 
 	/**
+	 * Get an {@link ArrayList} of indexes of the boolean equations of the model
+	 * that have link operators (both activators and inhibitors).
+	 */
+	public ArrayList<Integer> getLinkOperatorsIndexes() {
+		ArrayList<Integer> res = new ArrayList<>();
+
+		int index = 0;
+		for (BooleanEquation booleanEquation : model.getBooleanEquations()) {
+			String link = booleanEquation.getLink();
+			if (link.equals("and") || link.equals("or")) {
+				res.add(index);
+			}
+			index++;
+		}
+
+		return res;
+	}
+
+	/**
 	 * Find the binary representation of a given decimal <i>number</i>, using the given
 	 * amount of <i>digits</i>.
 	 *
@@ -197,24 +197,5 @@ public class BooleanModelGenerator {
 		}
 
 		return res;
-	}
-
-	public void calculateModelAttractors(ArrayList<BooleanModel> models) throws Exception {
-		if (attractors != null) {
-			logger.outputHeader(3, "Attractor calculation");
-
-			for (BooleanModel model : models) {
-				model.calculateAttractors(resultsDirectory);
-			}
-		}
-	}
-
-	public void exportModels(ArrayList<BooleanModel> models) throws IOException {
-		logger.outputHeader(3, "Model Export");
-
-		for (BooleanModel model : models) {
-			model.exportModelToGitsbeFile(modelsDirectory);
-			model.exportModelToBoolNetFile(modelsDirectory);
-		}
 	}
 }
