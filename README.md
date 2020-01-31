@@ -11,24 +11,30 @@ Then we generate every possible boolean model out of the initial one, by changin
 # Install
 
 ```
+git clone https://github.com/druglogics/abmlog.git
 mvn clean install
 ```
 
 # Examples
 
-The below example will generate the models with no calculation of attractors:
-```
-java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
-```
-
-The next example will generate the models and calculate the fixpoints (stable states):
-```
-java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
+Get the list of provided argument options:
+```shell script
+java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator
 ```
 
-The below example will generate the models and calculate the minimal trapspaces):
+The below example will generate all the possible boolean models and export them with no calculation of attractors:
 ```
-java -cp target/abmlog-1.1.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces
+java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
+```
+
+The next example will generate the models, calculate the **fixpoints (stable states)** and export them all:
+```
+java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
+```
+
+The below example will generate the models and calculate the **minimal trapspaces**, but will only export those that have at least 1 trapspace (there can be models that have only the *trivial* trapspace, e.g. all nodes are dashes):
+```
+java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces --export=1
 ```
 
 All attractors are calculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
