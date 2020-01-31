@@ -5,6 +5,7 @@ import com.beust.jcommander.ParameterException;
 import eu.druglogics.gitsbe.model.BooleanEquation;
 import eu.druglogics.gitsbe.model.BooleanModel;
 import eu.druglogics.gitsbe.model.GeneralModel;
+import eu.druglogics.gitsbe.util.FileDeleter;
 import eu.druglogics.gitsbe.util.Logger;
 import org.apache.commons.lang3.StringUtils;
 
@@ -25,6 +26,7 @@ public class BooleanModelGenerator {
 	public String modelsDirectory;
 	public String attractors;
 	public int verbosity;
+	public int export;
 	public Logger logger;
 
 	public BooleanModel model;
@@ -78,17 +80,30 @@ public class BooleanModelGenerator {
 		createDirectory(modelsDirectory);
 
 		attractors = arguments.getAttractors();
-
 		if ((attractors != null) &&
 			(!attractors.equals("fixpoints")) &&
 			(!attractors.equals("trapspaces"))) {
 			throw new ConfigurationException("Attractors can only be: `fixpoints` or `trapspaces` or absent");
 		}
+
+		export = arguments.getExport();
+		if ((export != 0) && (export != 1))
+			throw new ConfigurationException("Export can only be: 0 or 1");
+
+		if ((export == 1) && (attractors == null))
+			throw new ConfigurationException("Cannot have export of models with 1 or more attractors "
+				+ "without calculating these! Please specify an `attractors` option or set `export` to 0 "
+				+ "(all models)");
 	}
 
 	public void initLogger() throws IOException {
 		String filenameOutput = "log";
 		logger = new Logger(filenameOutput, resultsDirectory, verbosity, true);
+
+		String[] argsMessage = { "\nInput parameters", "----------------",
+			"Network File: " + networkFile, "Attractors: " + attractors, "Verbosity: " + verbosity,
+			"Export: " + export };
+		logger.outputLines(3, argsMessage);
 	}
 
 	public void initModel() throws Exception {
@@ -109,6 +124,8 @@ public class BooleanModelGenerator {
 	public void genModels() throws Exception {
 		logger.outputHeader(3, "Model Generation, Attractor Calculation and Export");
 
+		FileDeleter fileDeleter = new FileDeleter(modelsDirectory);
+
 		boolean calculateAttractors = true;
 		if (attractors == null) {
 			calculateAttractors = false;
@@ -122,7 +139,7 @@ public class BooleanModelGenerator {
 			+ indexes.size() + " equations with link operators)");
 
 		String baseName = model.getModelName();
-		for(int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+		for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
 			model.setModelName(baseName + "_" + modelNumber);
 
 			logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber);
@@ -130,7 +147,7 @@ public class BooleanModelGenerator {
 			String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
 
 			int digitIndex = 0;
-			for(char digit: binaryRes.toCharArray()) {
+			for (char digit : binaryRes.toCharArray()) {
 				int equationIndex = indexes.get(digitIndex);
 				String link = model.getBooleanEquations().get(equationIndex).getLink();
 				if ((digit == '0') && (link.equals("or")) || (digit == '1') && (link.equals("and"))) {
@@ -144,7 +161,22 @@ public class BooleanModelGenerator {
 				model.calculateAttractors(modelsDirectory);
 			}
 
+			exportModel(calculateAttractors, fileDeleter);
+		}
+	}
+
+	public void exportModel(boolean calculateAttractors, FileDeleter fileDeleter) throws IOException {
+		if (calculateAttractors) { // there is a .bnet file already created
+			if (export == 0 || (export == 1  && model.hasAttractors())){
+				model.exportModelToGitsbeFile(modelsDirectory);
+			} else if ((export == 1) && (!model.hasAttractors())) {
+				fileDeleter.activate();
+				FileDeleter.deleteFilesMatchingPattern(logger, model.getModelName());
+				fileDeleter.disable();
+			}
+		} else { // no .bnet file created, export should be 0 (all models exported)
 			model.exportModelToGitsbeFile(modelsDirectory);
+			model.exportModelToBoolNetFile(modelsDirectory);
 		}
 	}
 
