@@ -17,12 +17,12 @@ mvn clean install
 
 # Examples
 
-Get the list of provided argument options:
+Get the list of all **provided user options**:
 ```shell script
 java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator
 ```
 
-The below example will generate all the possible boolean models and export them with no calculation of attractors:
+The below example will generate all the possible boolean models and export them with **no calculation of attractors**:
 ```
 java -cp target/abmlog-1.2.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
 ```
