@@ -30,6 +30,10 @@ public class CommandLineArgs {
 		order = 3)
 	private Integer export = 0;
 
+	@Parameter(names = { "--parallel", "-p" }, description = "Should the calculations use all the " +
+		"available cores?", order = 4)
+	private boolean parallel = false;
+
 	public String getNetworkFile() {
 		return networkFile;
 	}
@@ -44,5 +48,9 @@ public class CommandLineArgs {
 
 	public Integer getExport() {
 		return export;
+	}
+
+	public boolean getParallel() {
+		return parallel;
 	}
 }

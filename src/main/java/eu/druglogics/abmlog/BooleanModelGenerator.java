@@ -16,6 +16,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.stream.IntStream;
 
 import static eu.druglogics.gitsbe.util.Util.*;
 
@@ -27,9 +28,11 @@ public class BooleanModelGenerator {
 	public String attractors;
 	public int verbosity;
 	public int export;
+	public boolean parallel;
 	public Logger logger;
-
 	public BooleanModel model;
+
+	private final String COMMON_FORK_JOIN_POOL_PARALLELISM = "java.util.concurrent.ForkJoinPool.common.parallelism";
 
 	BooleanModelGenerator() {
 		// empty constructor
@@ -42,7 +45,7 @@ public class BooleanModelGenerator {
 			modelGenerator.initInputArgs(args);
 			modelGenerator.initLogger();
 			modelGenerator.initModel();
-			modelGenerator.genModels();
+			modelGenerator.generateModels();
 		} catch (ParameterException parEx) {
 			System.out.println("\nOptions preceded by an asterisk are required.");
 			parEx.getJCommander().setProgramName("eu.druglogics.amblog.BooleanModelGenerator");
@@ -94,6 +97,8 @@ public class BooleanModelGenerator {
 			throw new ConfigurationException("Cannot have export of models with 1 or more attractors "
 				+ "without calculating these! Please specify an `attractors` option or set `export` to 0 "
 				+ "(all models)");
+
+		parallel = arguments.getParallel();
 	}
 
 	public void initLogger() throws IOException {
@@ -102,7 +107,7 @@ public class BooleanModelGenerator {
 
 		String[] argsMessage = { "\nInput parameters", "----------------",
 			"Network File: " + networkFile, "Attractors: " + attractors, "Verbosity: " + verbosity,
-			"Export: " + export };
+			"Export: " + export, "Parallel: " + parallel };
 		logger.outputLines(3, argsMessage);
 	}
 
@@ -121,10 +126,11 @@ public class BooleanModelGenerator {
 		this.model = new BooleanModel(generalModel, attractorTool, logger);
 	}
 
-	public void genModels() throws Exception {
+	public void generateModels() throws Exception {
 		logger.outputHeader(3, "Model Generation, Attractor Calculation and Export");
 
 		FileDeleter fileDeleter = new FileDeleter(modelsDirectory);
+		String baseName = model.getModelName();
 
 		boolean calculateAttractors = true;
 		if (attractors == null) {
@@ -138,50 +144,93 @@ public class BooleanModelGenerator {
 		logger.outputHeader(3, "Total number of models: " + numOfModels + " ("
 			+ indexes.size() + " equations with link operators)");
 
-		String baseName = model.getModelName();
-		for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
-			model.setModelName(baseName + "_" + modelNumber);
+		int cores = Runtime.getRuntime().availableProcessors();
+		if (cores == 1) parallel = false;
+		if (cores % 2 == 1) cores--; // so that we have an even number of cores
 
-			logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber);
+		if (parallel && cores < numOfModels) { // USE ALL CORES
+			int range = numOfModels / cores;
 
-			String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
+			System.setProperty(COMMON_FORK_JOIN_POOL_PARALLELISM, Integer.toString(cores - 1));
+			logger.outputHeader(3, "Use parallelism with " + cores + " cores where each core " +
+				"will handle " + range + " models");
 
-			int digitIndex = 0;
-			for (char digit : binaryRes.toCharArray()) {
-				int equationIndex = indexes.get(digitIndex);
-				String link = model.getBooleanEquations().get(equationIndex).getLink();
-				if ((digit == '0') && (link.equals("or")) || (digit == '1') && (link.equals("and"))) {
-					model.changeLinkOperator(equationIndex);
+			boolean finalCalculateAttractors = calculateAttractors;
+			IntStream.range(0, cores).parallel().forEach(coreId -> {
+				try {
+					logger.outputStringMessage(3, "Model generating job assigned to Core No. " + (coreId + 1) + " started");
+					Logger logger = new Logger("log_" + coreId, resultsDirectory, verbosity, true);
+					BooleanModel booleanModel = new BooleanModel(model, logger);
+
+					int startIndex = coreId * range;
+					int endIndex = (coreId + 1) * range;
+					logger.outputStringMessage(3, "This job will cover model ranging from "
+						+ startIndex + " to " + (endIndex - 1) + " (inclusive)");
+					for (int modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
+						genModel(booleanModel, baseName, modelNumber, indexes, finalCalculateAttractors, fileDeleter, logger);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-				digitIndex++;
+			});
+		} else { // USE ONE CORE
+			for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+				genModel(this.model, baseName, modelNumber, indexes, calculateAttractors, fileDeleter, this.logger);
 			}
-
-			if (calculateAttractors) {
-				model.resetAttractors();
-				model.calculateAttractors(modelsDirectory);
-			}
-
-			exportModel(calculateAttractors, fileDeleter);
-		}
-	}
-
-	public void exportModel(boolean calculateAttractors, FileDeleter fileDeleter) throws IOException {
-		if (calculateAttractors) { // there is a .bnet file already created
-			if (export == 0 || (export == 1  && model.hasAttractors())){
-				model.exportModelToGitsbeFile(modelsDirectory);
-			} else if ((export == 1) && (!model.hasAttractors())) {
-				fileDeleter.activate();
-				FileDeleter.deleteFilesMatchingPattern(logger, model.getModelName());
-				fileDeleter.disable();
-			}
-		} else { // no .bnet file created, export should be 0 (all models exported)
-			model.exportModelToGitsbeFile(modelsDirectory);
-			model.exportModelToBoolNetFile(modelsDirectory);
 		}
 	}
 
 	/**
-	 * Get an {@link ArrayList} of indexes of the boolean equations of the model
+	 * Use this function to generate a (mutated) boolean model based on the binary representation of the
+	 * <i>modelNumber</i> given, which indicates if the equations at the specific
+	 * <i>indexes</i> will have an <b>and not (0)</b> or <b>or not (1)</b> link operator.
+	 * <br>
+	 * This function also does the calculation of the model's attractors and the exporting as well
+	 * (depends on the available options).
+	 *
+	 */
+	public void genModel(BooleanModel booleanModel, String baseName, int modelNumber, ArrayList<Integer> indexes,
+						 boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws Exception {
+		booleanModel.setModelName(baseName + "_" + modelNumber);
+		logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber);
+
+		String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
+
+		int digitIndex = 0;
+		for (char digit : binaryRes.toCharArray()) {
+			int equationIndex = indexes.get(digitIndex);
+			String link = booleanModel.getBooleanEquations().get(equationIndex).getLink();
+			if ((digit == '0') && (link.equals("or")) || (digit == '1') && (link.equals("and"))) {
+				booleanModel.changeLinkOperator(equationIndex);
+			}
+			digitIndex++;
+		}
+
+		if (calculateAttractors) {
+			booleanModel.resetAttractors();
+			booleanModel.calculateAttractors(modelsDirectory);
+		}
+
+		exportModel(booleanModel, calculateAttractors, fileDeleter);
+	}
+
+	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, FileDeleter fileDeleter) throws IOException {
+		if (calculateAttractors) { // there is a .bnet file already created
+			if (export == 0 || (export == 1  && booleanModel.hasAttractors())){
+				booleanModel.exportModelToGitsbeFile(modelsDirectory);
+			} else if ((export == 1) && (!booleanModel.hasAttractors())) {
+				fileDeleter.activate();
+				FileDeleter.deleteFilesMatchingPattern(logger, booleanModel.getModelName());
+				fileDeleter.disable();
+			}
+		} else { // no .bnet file created, export should be 0 (all models exported)
+			booleanModel.exportModelToGitsbeFile(modelsDirectory);
+			booleanModel.exportModelToBoolNetFile(modelsDirectory);
+		}
+	}
+
+	/**
+	 * Get an {@link ArrayList} of indexes of the boolean equations of the initial model
 	 * that have link operators (both activators and inhibitors).
 	 */
 	public ArrayList<Integer> getLinkOperatorsIndexes() {
