@@ -211,10 +211,10 @@ public class BooleanModelGenerator {
 			booleanModel.calculateAttractors(modelsDirectory);
 		}
 
-		exportModel(booleanModel, calculateAttractors, fileDeleter);
+		exportModel(booleanModel, calculateAttractors, fileDeleter, logger);
 	}
 
-	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, FileDeleter fileDeleter) throws IOException {
+	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws IOException {
 		if (calculateAttractors) { // there is a .bnet file already created
 			if (export == 0 || (export == 1  && booleanModel.hasAttractors())){
 				booleanModel.exportModelToGitsbeFile(modelsDirectory);
