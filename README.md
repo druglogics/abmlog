@@ -21,28 +21,33 @@ mvn clean install
 
 Get the list of all **provided user options**:
 ```shell script
-java -cp target/abmlog-1.3.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator
+java -cp target/abmlog-1.4.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator
 ```
 
 The example below will generate all the possible boolean models and export them with **no calculation of attractors**:
 ```
-java -cp target/abmlog-1.3.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
+java -cp target/abmlog-1.4.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif
 ```
 
-The next example will generate the models, calculate the **fixpoints (stable states)** and export them all:
+The next example will generate the models and also calculate the **fixpoints (stable states)**:
 ```
-java -cp target/abmlog-1.3.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
+java -cp target/abmlog-1.4.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints
 ```
 
 The examples above **use only 1 core** to generate the models, but this job can be **parallelized** by giving an extra parameter `--parallel` (so that all available cores are used):
 ```
-java -cp target/abmlog-1.3.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints --parallel
+java -cp target/abmlog-1.4.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=fixpoints --parallel
 ```
 
-The example below will generate the models and calculate the **minimal trapspaces**, but will only export those that have at least 1 trapspace (there can be models that have only the *trivial* trapspace, e.g. all nodes are dashes):
+The example below will generate the models and also calculate the **minimal trapspaces**:
 ```
-java -cp target/abmlog-1.3.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces --export=1
+java -cp target/abmlog-1.4.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator --file=test/test.sif --attractors=trapspaces
 ```
 
 All attractors are calculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
 The result models are saved in both **BoolNet** (.bnet) and **Gitsbe** (.gitsbe) formats.
+
+## Output 
+
+The output consists of a `results_<network_file>_<date>` directory which holds the `log` files and a `models` directory where the models are saved. Note that we split the `models` directory to several **if the amount of models exceeds 100000** thus avoiding filesystem issues that may arise. For large models, always try to use a machine with as many cores as possible (and the `--parallel` option of course) as well as check that the number of *inodes* (for Linux systems) is enough to store the total amount of models that will be generated (this information is outputed on the first lines of the main `log` file).
+ 
