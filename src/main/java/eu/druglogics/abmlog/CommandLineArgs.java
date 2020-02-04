@@ -25,13 +25,8 @@ public class CommandLineArgs {
 		"3 = Everything)", order = 2)
 	private String verbosity = "3";
 
-	@Parameter(names = { "--export", "-e" }, description = "Export Level: 0 = all models, "
-		+ "1 = export only models that have at least 1 attractor (stable state or trapspace)",
+	@Parameter(names = { "--parallel", "-p" }, description = "Should we use all the available cores?",
 		order = 3)
-	private Integer export = 0;
-
-	@Parameter(names = { "--parallel", "-p" }, description = "Should the calculations use all the " +
-		"available cores?", order = 4)
 	private boolean parallel = false;
 
 	public String getNetworkFile() {
@@ -44,10 +39,6 @@ public class CommandLineArgs {
 
 	public String getVerbosity() {
 		return verbosity;
-	}
-
-	public Integer getExport() {
-		return export;
 	}
 
 	public boolean getParallel() {

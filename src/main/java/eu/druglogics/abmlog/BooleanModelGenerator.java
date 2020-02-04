@@ -5,7 +5,6 @@ import com.beust.jcommander.ParameterException;
 import eu.druglogics.gitsbe.model.BooleanEquation;
 import eu.druglogics.gitsbe.model.BooleanModel;
 import eu.druglogics.gitsbe.model.GeneralModel;
-import eu.druglogics.gitsbe.util.FileDeleter;
 import eu.druglogics.gitsbe.util.Logger;
 import org.apache.commons.lang3.StringUtils;
 
@@ -27,12 +26,9 @@ public class BooleanModelGenerator {
 	public String modelsDirectory;
 	public String attractors;
 	public int verbosity;
-	public int export;
 	public boolean parallel;
 	public Logger logger;
 	public BooleanModel model;
-
-	private final String COMMON_FORK_JOIN_POOL_PARALLELISM = "java.util.concurrent.ForkJoinPool.common.parallelism";
 
 	BooleanModelGenerator() {
 		// empty constructor
@@ -89,15 +85,6 @@ public class BooleanModelGenerator {
 			throw new ConfigurationException("Attractors can only be: `fixpoints` or `trapspaces` or absent");
 		}
 
-		export = arguments.getExport();
-		if ((export != 0) && (export != 1))
-			throw new ConfigurationException("Export can only be: 0 or 1");
-
-		if ((export == 1) && (attractors == null))
-			throw new ConfigurationException("Cannot have export of models with 1 or more attractors "
-				+ "without calculating these! Please specify an `attractors` option or set `export` to 0 "
-				+ "(all models)");
-
 		parallel = arguments.getParallel();
 	}
 
@@ -106,8 +93,8 @@ public class BooleanModelGenerator {
 		logger = new Logger(filenameOutput, resultsDirectory, verbosity, true);
 
 		String[] argsMessage = { "\nInput parameters", "----------------",
-			"Network File: " + networkFile, "Attractors: " + attractors, "Verbosity: " + verbosity,
-			"Export: " + export, "Parallel: " + parallel };
+			"Network File: " + networkFile, "Attractors: " + attractors,
+			"Verbosity: " + verbosity, "Parallel: " + parallel };
 		logger.outputLines(3, argsMessage);
 	}
 
@@ -129,7 +116,6 @@ public class BooleanModelGenerator {
 	public void generateModels() throws Exception {
 		logger.outputHeader(3, "Model Generation, Attractor Calculation and Export");
 
-		FileDeleter fileDeleter = new FileDeleter(modelsDirectory);
 		String baseName = model.getModelName();
 
 		boolean calculateAttractors = true;
@@ -151,6 +137,7 @@ public class BooleanModelGenerator {
 		if (parallel && cores < numOfModels) { // USE ALL CORES
 			int range = numOfModels / cores;
 
+			String COMMON_FORK_JOIN_POOL_PARALLELISM = "java.util.concurrent.ForkJoinPool.common.parallelism";
 			System.setProperty(COMMON_FORK_JOIN_POOL_PARALLELISM, Integer.toString(cores - 1));
 			logger.outputHeader(3, "Use parallelism with " + cores + " cores where each core " +
 				"will handle " + range + " models");
@@ -166,22 +153,51 @@ public class BooleanModelGenerator {
 					int endIndex = (coreId + 1) * range;
 					logger.outputStringMessage(3, "This job will cover model ranging from "
 						+ startIndex + " to " + (endIndex - 1) + " (inclusive)");
+
+					int modelsDirSize = 0; // counts the number of models in a specific models dir
+					int modelDirIndex = 0;
+					String newModelsDirectory = new File(modelsDirectory + "/core_" + coreId
+						+ "_" + modelDirIndex).getAbsolutePath();
+					createDirectory(newModelsDirectory, logger);
+
 					int index = 0;
 					for (int modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
+						if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
+							newModelsDirectory = new File(modelsDirectory + "/core_" + coreId
+								+ "_" + (++modelDirIndex)).getAbsolutePath();
+							createDirectory(newModelsDirectory, logger);
+
+							modelsDirSize = 0;
+						}
+
 						logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber
 							+ " (" + String.format("%.1f", ((float) index / range * 100)) + "%)");
-						genModel(booleanModel, baseName, modelNumber, indexes, finalCalculateAttractors, fileDeleter, logger);
+						genModel(booleanModel, baseName, modelNumber, indexes, finalCalculateAttractors, newModelsDirectory);
+
 						index++;
+						modelsDirSize++;
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			});
 		} else { // USE ONE CORE
+			int modelsDirSize = 0; // counts the number of models in a specific models dir
+			int modelDirIndex = 0;
+			String newModelsDirectory = modelsDirectory;
 			for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+				if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
+					newModelsDirectory = new File(resultsDirectory + "/models_" + (++modelDirIndex)).getAbsolutePath();
+					createDirectory(newModelsDirectory, this.logger);
+
+					modelsDirSize = 0;
+				}
+
 				logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber
 					+ " (" + String.format("%.1f", ((float) modelNumber / numOfModels * 100)) + "%)");
-				genModel(this.model, baseName, modelNumber, indexes, calculateAttractors, fileDeleter, this.logger);
+				genModel(this.model, baseName, modelNumber, indexes, calculateAttractors, newModelsDirectory);
+
+				modelsDirSize++;
 			}
 		}
 	}
@@ -196,7 +212,7 @@ public class BooleanModelGenerator {
 	 *
 	 */
 	public void genModel(BooleanModel booleanModel, String baseName, int modelNumber, ArrayList<Integer> indexes,
-						 boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws Exception {
+						 boolean calculateAttractors, String modelsDirectory) throws Exception {
 		booleanModel.setModelName(baseName + "_" + modelNumber);
 
 		String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
@@ -216,19 +232,13 @@ public class BooleanModelGenerator {
 			booleanModel.calculateAttractors(modelsDirectory);
 		}
 
-		exportModel(booleanModel, calculateAttractors, fileDeleter, logger);
+		exportModel(booleanModel, calculateAttractors, modelsDirectory);
 	}
 
-	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws IOException {
+	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, String modelsDirectory) throws IOException {
 		if (calculateAttractors) { // there is a .bnet file already created
-			if (export == 0 || (export == 1  && booleanModel.hasAttractors())) {
-				booleanModel.exportModelToGitsbeFile(modelsDirectory);
-			} else if ((export == 1) && (!booleanModel.hasAttractors())) {
-				fileDeleter.activate();
-				FileDeleter.deleteFilesMatchingPattern(logger, booleanModel.getModelName());
-				fileDeleter.disable();
-			}
-		} else { // no .bnet file created, export should be 0 (all models exported)
+			booleanModel.exportModelToGitsbeFile(modelsDirectory);
+		} else { // no .bnet file created
 			booleanModel.exportModelToGitsbeFile(modelsDirectory);
 			booleanModel.exportModelToBoolNetFile(modelsDirectory);
 		}
