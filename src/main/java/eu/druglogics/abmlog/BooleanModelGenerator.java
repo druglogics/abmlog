@@ -166,8 +166,12 @@ public class BooleanModelGenerator {
 					int endIndex = (coreId + 1) * range;
 					logger.outputStringMessage(3, "This job will cover model ranging from "
 						+ startIndex + " to " + (endIndex - 1) + " (inclusive)");
+					int index = 0;
 					for (int modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
+						logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber
+							+ " (" + String.format("%.1f", ((float) index / range * 100)) + "%)");
 						genModel(booleanModel, baseName, modelNumber, indexes, finalCalculateAttractors, fileDeleter, logger);
+						index++;
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -175,6 +179,8 @@ public class BooleanModelGenerator {
 			});
 		} else { // USE ONE CORE
 			for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+				logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber
+					+ " (" + String.format("%.1f", ((float) modelNumber / numOfModels * 100)) + "%)");
 				genModel(this.model, baseName, modelNumber, indexes, calculateAttractors, fileDeleter, this.logger);
 			}
 		}
@@ -192,7 +198,6 @@ public class BooleanModelGenerator {
 	public void genModel(BooleanModel booleanModel, String baseName, int modelNumber, ArrayList<Integer> indexes,
 						 boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws Exception {
 		booleanModel.setModelName(baseName + "_" + modelNumber);
-		logger.outputStringMessage(3, "\nGenerating model No. " + modelNumber);
 
 		String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
 
@@ -216,7 +221,7 @@ public class BooleanModelGenerator {
 
 	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, FileDeleter fileDeleter, Logger logger) throws IOException {
 		if (calculateAttractors) { // there is a .bnet file already created
-			if (export == 0 || (export == 1  && booleanModel.hasAttractors())){
+			if (export == 0 || (export == 1  && booleanModel.hasAttractors())) {
 				booleanModel.exportModelToGitsbeFile(modelsDirectory);
 			} else if ((export == 1) && (!booleanModel.hasAttractors())) {
 				fileDeleter.activate();
