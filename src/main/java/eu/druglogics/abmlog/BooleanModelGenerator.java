@@ -2,11 +2,9 @@ package eu.druglogics.abmlog;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
-import eu.druglogics.gitsbe.model.BooleanEquation;
 import eu.druglogics.gitsbe.model.BooleanModel;
 import eu.druglogics.gitsbe.model.GeneralModel;
 import eu.druglogics.gitsbe.util.Logger;
-import org.apache.commons.lang3.StringUtils;
 
 import javax.naming.ConfigurationException;
 import java.io.File;
@@ -17,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.stream.IntStream;
 
+import static eu.druglogics.abmlog.Util.genModel;
+import static eu.druglogics.abmlog.Util.getLinkOperatorsIndexes;
 import static eu.druglogics.gitsbe.util.Util.*;
 
 public class BooleanModelGenerator {
@@ -124,7 +124,7 @@ public class BooleanModelGenerator {
 			logger.outputStringMessage(3, "Attractors will NOT be calculated for the generated models!");
 		}
 
-		ArrayList<Integer> indexes = getLinkOperatorsIndexes();
+		ArrayList<Integer> indexes = getLinkOperatorsIndexes(model);
 		long numOfModels = (long) Math.pow(2.0, indexes.size());
 
 		logger.outputHeader(3, "Total number of models: " + numOfModels + " ("
@@ -200,98 +200,5 @@ public class BooleanModelGenerator {
 				modelsDirSize++;
 			}
 		}
-	}
-
-	/**
-	 * Use this function to generate a (mutated) boolean model based on the binary representation of the
-	 * <i>modelNumber</i> given, which indicates if the equations at the specific
-	 * <i>indexes</i> will have an <b>and not (0)</b> or <b>or not (1)</b> link operator.
-	 * <br>
-	 * This function also does the calculation of the model's attractors and the exporting as well
-	 * (depends on the available options).
-	 *
-	 */
-	public void genModel(BooleanModel booleanModel, String baseName, long modelNumber, ArrayList<Integer> indexes,
-						 boolean calculateAttractors, String modelsDirectory) throws Exception {
-		booleanModel.setModelName(baseName + "_" + modelNumber);
-
-		String binaryRes = getBinaryRepresentation(modelNumber, indexes.size());
-
-		int digitIndex = 0;
-		for (char digit : binaryRes.toCharArray()) {
-			int equationIndex = indexes.get(digitIndex);
-			String link = booleanModel.getBooleanEquations().get(equationIndex).getLink();
-			if ((digit == '0') && (link.equals("or")) || (digit == '1') && (link.equals("and"))) {
-				booleanModel.changeLinkOperator(equationIndex);
-			}
-			digitIndex++;
-		}
-
-		if (calculateAttractors) {
-			booleanModel.resetAttractors();
-			booleanModel.calculateAttractors(modelsDirectory);
-		}
-
-		exportModel(booleanModel, calculateAttractors, modelsDirectory);
-	}
-
-	public void exportModel(BooleanModel booleanModel, boolean calculateAttractors, String modelsDirectory) throws IOException {
-		if (calculateAttractors) { // there is a .bnet file already created
-			booleanModel.exportModelToGitsbeFile(modelsDirectory);
-		} else { // no .bnet file created
-			booleanModel.exportModelToGitsbeFile(modelsDirectory);
-			booleanModel.exportModelToBoolNetFile(modelsDirectory);
-		}
-	}
-
-	/**
-	 * Get an {@link ArrayList} of indexes of the boolean equations of the initial model
-	 * that have link operators (both activators and inhibitors).
-	 */
-	public ArrayList<Integer> getLinkOperatorsIndexes() {
-		ArrayList<Integer> res = new ArrayList<>();
-
-		int index = 0;
-		for (BooleanEquation booleanEquation : model.getBooleanEquations()) {
-			String link = booleanEquation.getLink();
-			if (link.equals("and") || link.equals("or")) {
-				res.add(index);
-			}
-			index++;
-		}
-
-		return res;
-	}
-
-	/**
-	 * Find the binary representation of a given decimal <i>number</i>, using the given
-	 * amount of <i>digits</i>.
-	 *
-	 * @param number decimal number
-	 * @param digits number of binary digits
-	 * @return the binary representation
-	 *
-	 */
-	public String getBinaryRepresentation(long number, int digits) throws Exception {
-		// with given digits we can reach up to:
-		long max = (long) Math.pow(2, digits) - 1;
-
-		if ((number > max) || (number < 0) || (digits < 1))
-			throw new Exception("Number is negative or it cannot be represented "
-				+ "with the given number of digits");
-
-		char[] arr = Long.toBinaryString(number).toCharArray();
-		StringBuilder sb = new StringBuilder();
-		for (Character c : arr) {
-			sb.append(c);
-		}
-
-		// add padding zeros if needed
-		String res = sb.toString();
-		if (res.length() < digits) {
-			res = StringUtils.leftPad(sb.toString(), digits, "0");
-		}
-
-		return res;
 	}
 }
