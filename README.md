@@ -55,7 +55,7 @@ For a boolean model that has e.g. 23 boolean equations with a link operator, gen
 Another case is that we may just want a *sample* out of the pool of all possible models.
 These use cases are covered by a simple random boolean model generator that produces structurally different models based on link operator mutations.
 
-Generating 100 models from the input network:
+Generating 100 models from the input network (attractors are calculated and are always the fixpoints):
 
 ```
 java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.RandomBooleanModelGenerator --file=test/network.sif --num=100
