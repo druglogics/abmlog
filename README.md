@@ -22,6 +22,8 @@ mvn clean install
 
 # Examples
 
+We now provide some examples using the `BooleanModelGenerator` and `RandomBooleanModelGenerator`.
+
 Get the list of all **provided user options**:
 ```
 java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.BooleanModelGenerator
@@ -51,10 +53,12 @@ java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.Bool
 
 For a boolean model that has e.g. 23 boolean equations with a link operator, generating all *2^23* possible link operator permutated models might be very challenging task (time-wise, space-wise, etc.).
 Another case is that we may just want a *sample* out of the pool of all possible models.
-These user cases are covered by a simple a random boolean model generator that produces structurally different models based on link operator mutations:
+These use cases are covered by a simple random boolean model generator that produces structurally different models based on link operator mutations.
+
+Generating 100 models from the input network:
 
 ```
-java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.RandomBooleanModelGenerator --file=test/test.sif --num=100
+java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.RandomBooleanModelGenerator --file=test/network.sif --num=100
 ```
 
 All attractors are calculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
@@ -62,7 +66,7 @@ The result models are saved in both **BoolNet** (.bnet) and **Gitsbe** (.gitsbe)
 
 ## Output 
 
-For both generators, the output consists of a `results_<network_file>_<date>` directory which holds the `log` file(s) and a `models` directory where the models are saved.
+For both model generators, the output consists of a `results_<network_file>_<date>` directory which holds the `log` file(s) and a `models` directory where the models are saved.
 
 In the case of the `BooleanModelGenerator`, we split the `models` directory to several **if the amount of models exceeds 100000** thus avoiding filesystem issues that may arise.
 For large models, always try to use a machine with as many cores as possible (and the `--parallel` option of course) as well as check that the number of *inodes* (for Linux systems) is enough to store the total amount of models that will be generated (this information is outputed on the first lines of the main `log` file).
