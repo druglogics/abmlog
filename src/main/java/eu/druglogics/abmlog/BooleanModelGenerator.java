@@ -125,7 +125,7 @@ public class BooleanModelGenerator {
 		}
 
 		ArrayList<Integer> indexes = getLinkOperatorsIndexes();
-		int numOfModels = (int) Math.pow(2.0, indexes.size());
+		long numOfModels = (long) Math.pow(2.0, indexes.size());
 
 		logger.outputHeader(3, "Total number of models: " + numOfModels + " ("
 			+ indexes.size() + " equations with link operators)");
@@ -135,7 +135,7 @@ public class BooleanModelGenerator {
 		if (cores % 2 == 1) cores--; // so that we have an even number of cores
 
 		if (parallel && cores < numOfModels) { // USE ALL CORES
-			int range = numOfModels / cores;
+			long range = numOfModels / cores;
 
 			String COMMON_FORK_JOIN_POOL_PARALLELISM = "java.util.concurrent.ForkJoinPool.common.parallelism";
 			System.setProperty(COMMON_FORK_JOIN_POOL_PARALLELISM, Integer.toString(cores - 1));
@@ -149,19 +149,19 @@ public class BooleanModelGenerator {
 					Logger logger = new Logger("log_" + coreId, resultsDirectory, verbosity, true);
 					BooleanModel booleanModel = new BooleanModel(model, logger);
 
-					int startIndex = coreId * range;
-					int endIndex = (coreId + 1) * range;
+					long startIndex = coreId * range;
+					long endIndex = (coreId + 1) * range;
 					logger.outputStringMessage(3, "This job will cover model ranging from "
 						+ startIndex + " to " + (endIndex - 1) + " (inclusive)");
 
-					int modelsDirSize = 0; // counts the number of models in a specific models dir
-					int modelDirIndex = 0;
+					long modelsDirSize = 0; // counts the number of models in a specific models dir
+					long modelDirIndex = 0;
 					String newModelsDirectory = new File(modelsDirectory + "/core_" + coreId
 						+ "_" + modelDirIndex).getAbsolutePath();
 					createDirectory(newModelsDirectory, logger);
 
 					int index = 0;
-					for (int modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
+					for (long modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
 						if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
 							newModelsDirectory = new File(modelsDirectory + "/core_" + coreId
 								+ "_" + (++modelDirIndex)).getAbsolutePath();
@@ -182,10 +182,10 @@ public class BooleanModelGenerator {
 				}
 			});
 		} else { // USE ONE CORE
-			int modelsDirSize = 0; // counts the number of models in a specific models dir
-			int modelDirIndex = 0;
+			long modelsDirSize = 0; // counts the number of models in a specific models dir
+			long modelDirIndex = 0;
 			String newModelsDirectory = modelsDirectory;
-			for (int modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
+			for (long modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
 				if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
 					newModelsDirectory = new File(resultsDirectory + "/models_" + (++modelDirIndex)).getAbsolutePath();
 					createDirectory(newModelsDirectory, this.logger);
@@ -211,7 +211,7 @@ public class BooleanModelGenerator {
 	 * (depends on the available options).
 	 *
 	 */
-	public void genModel(BooleanModel booleanModel, String baseName, int modelNumber, ArrayList<Integer> indexes,
+	public void genModel(BooleanModel booleanModel, String baseName, long modelNumber, ArrayList<Integer> indexes,
 						 boolean calculateAttractors, String modelsDirectory) throws Exception {
 		booleanModel.setModelName(baseName + "_" + modelNumber);
 
@@ -272,15 +272,15 @@ public class BooleanModelGenerator {
 	 * @return the binary representation
 	 *
 	 */
-	public String getBinaryRepresentation(int number, int digits) throws Exception {
+	public String getBinaryRepresentation(long number, int digits) throws Exception {
 		// with given digits we can reach up to:
-		int max = (int) Math.pow(2, digits) - 1;
+		long max = (long) Math.pow(2, digits) - 1;
 
 		if ((number > max) || (number < 0) || (digits < 1))
 			throw new Exception("Number is negative or it cannot be represented "
 				+ "with the given number of digits");
 
-		char[] arr = Integer.toBinaryString(number).toCharArray();
+		char[] arr = Long.toBinaryString(number).toCharArray();
 		StringBuilder sb = new StringBuilder();
 		for (Character c : arr) {
 			sb.append(c);
