@@ -25,6 +25,7 @@ public class BooleanModelGenerator {
 	public String resultsDirectory;
 	public String modelsDirectory;
 	public String attractors;
+	public int maxDirSize;
 	public int verbosity;
 	public boolean parallel;
 	public Logger logger;
@@ -86,6 +87,8 @@ public class BooleanModelGenerator {
 		}
 
 		parallel = arguments.getParallel();
+
+		maxDirSize = arguments.getMaxDirSize();
 	}
 
 	public void initLogger() throws IOException {
@@ -162,7 +165,7 @@ public class BooleanModelGenerator {
 
 					int index = 0;
 					for (long modelNumber = startIndex; modelNumber < endIndex; modelNumber++) {
-						if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
+						if (modelsDirSize > maxDirSize - 1) { // create new models dir to avoid filesystem errors
 							newModelsDirectory = new File(modelsDirectory + "/core_" + coreId
 								+ "_" + (++modelDirIndex)).getAbsolutePath();
 							createDirectory(newModelsDirectory, logger);
@@ -186,7 +189,7 @@ public class BooleanModelGenerator {
 			long modelDirIndex = 0;
 			String newModelsDirectory = modelsDirectory;
 			for (long modelNumber = 0; modelNumber < numOfModels; modelNumber++) {
-				if (modelsDirSize > 99999) { // create new models dir to avoid filesystem errors
+				if (modelsDirSize > maxDirSize - 1) { // create new models dir to avoid filesystem errors
 					newModelsDirectory = new File(resultsDirectory + "/models_" + (++modelDirIndex)).getAbsolutePath();
 					createDirectory(newModelsDirectory, this.logger);
 

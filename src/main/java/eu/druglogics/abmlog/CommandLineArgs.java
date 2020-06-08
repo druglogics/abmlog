@@ -29,6 +29,11 @@ public class CommandLineArgs {
 		order = 3)
 	private boolean parallel = false;
 
+	@Parameter(names = { "--max-dir-size", "-mds" }, description = "The maximum number of models " +
+		"per generated directory. Note that double that number of models are saved (both .gitsbe and " +
+		".bnet files)")
+	private int maxDirSize = 100000;
+
 	public String getNetworkFile() {
 		return networkFile;
 	}
@@ -43,5 +48,9 @@ public class CommandLineArgs {
 
 	public boolean getParallel() {
 		return parallel;
+	}
+
+	public int getMaxDirSize() {
+		return maxDirSize;
 	}
 }
