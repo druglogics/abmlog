@@ -58,7 +58,7 @@ These use cases are covered by a simple random boolean model generator that prod
 Generating 100 models from the input network (attractors are calculated and are always the fixpoints):
 
 ```
-java -cp target/abmlog-1.5.0-jar-with-dependencies.jar eu.druglogics.abmlog.RandomBooleanModelGenerator --file=test/network.sif --num=100
+java -cp target/abmlog-1.6.0-jar-with-dependencies.jar eu.druglogics.abmlog.RandomBooleanModelGenerator --file=test/network.sif --num=100
 ```
 
 All attractors are calculated using the [BioLQM](https://github.com/colomoto/bioLQM) library.
