@@ -2,11 +2,14 @@
 
 This module's name is an acronym for: *All possible boolean models link operator generator*.
 
-The only required input is a **single interactions file** which describes the network topology.
-Using that file, we build a boolean model whose equations are based on the following format:
-`A *= ( B or C or ... ) and not ( D or E or ... )`, translating thus lines from the *sif* file like e.g. `B -> A` and `D -| A`.
-Then we generate every possible boolean model out of the initial one, by changing the *link operator* (`and not` or 
-`or not`) between the activator and inhibitor regulators in every possible permutation.
+The only required input is a **single interactions file (.sif)** which describes the network topology.
+Using that file, we build a boolean model whose equations are based on the following **standardized format**:
+
+`A *= ( B or C or ... ) and not ( D or E or ... )`
+
+, translating thus lines from the *sif* file like e.g. `B -> A`, `C -> A` (*positive* regulators - *activators*) and `D -| A`, `E -| A` (*negative* regulators - *inhibitors*).
+`abmlog` generates every possible boolean model out of the initial one, by changing the *link operator* (**and not** vs **or not**) between the positive and negative regulators in every possible way for all equations.
+Thus the full range of *link operator-parameterized* boolean models is produced, from the one having all link operator equations with **and not** to the one having them with **or not**.
 
 For models that have a large number of equations with a link operator, making thus the generation of all possible link operator models infeasible/untractable, we provide a *random* model generator.
 
