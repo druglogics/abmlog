@@ -7,7 +7,8 @@ Using that file, we build a boolean model whose equations are based on the follo
 
 `A *= ( B or C or ... ) and not ( D or E or ... )`
 
-, translating thus lines from the *sif* file like e.g. `B -> A`, `C -> A` (*positive* regulators - *activators*) and `D -| A`, `E -| A` (*negative* regulators - *inhibitors*).
+, translating thus lines from the *.sif* file like e.g. `B -> A`, `C -> A` (`B,C` are *positive* regulators of `A` - *activators*) and `D -| A`, `E -| A` (`D,E` are *negative* regulators of `A` - *inhibitors*).
+
 `abmlog` generates every possible boolean model out of the initial one, by changing the *link operator* (**and not** vs **or not**) between the positive and negative regulators in every possible way for all equations.
 Thus the full range of *link operator-parameterized* boolean models is produced, from the one having all link operator equations with **and not** to the one having them with **or not**.
 
