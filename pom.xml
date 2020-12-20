@@ -108,4 +108,12 @@
         </dependency>
     </dependencies>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Maven Packages</name>
+            <url>https://maven.pkg.github.com/druglogics/abmlog</url>
+        </repository>
+    </distributionManagement>
+
 </project>
