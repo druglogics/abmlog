@@ -21,7 +21,7 @@ For models that have a large number of equations with a link operator, making th
 
 # Install
 
-First, [install Gitsbe](https://druglogics.github.io/druglogics-doc/gitsbe-install.html). 
+First, [install gitsbe](https://druglogics.github.io/druglogics-doc/gitsbe-install.html). 
 Then:
 ```
 git clone https://github.com/druglogics/abmlog.git
