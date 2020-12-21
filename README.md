@@ -29,6 +29,11 @@ cd abmlog
 mvn clean install
 ```
 
+The above command creates a package `<name>-jar-with-dependencies.jar` file with all dependencies installed, in the `target` directory.
+
+Alternatively, you could just use directly one of the [released packages](https://github.com/druglogics/abmlog/packages/).
+
+
 # Examples
 
 We now provide some examples using the `BooleanModelGenerator` and `RandomBooleanModelGenerator`.
