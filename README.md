@@ -2,10 +2,10 @@
 
 <!-- badges: start -->
 [![Java CI with Maven](https://github.com/druglogics/abmlog/workflows/Java%20CI%20with%20Maven/badge.svg)](https://github.com/druglogics/abmlog/actions)
-[![License](https://img.shields.io/github/license/druglogics/abmlog)](https://github.com/druglogics/abmlog/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/druglogics/abmlog)](https://github.com/druglogics/abmlog/blob/master/LICENSE.md)
 <!-- badges: end -->
 
-This module's name is an acronym for: *All possible boolean models link operator generator*.
+This module's name is an acronym for: **A**ll possible **B**oolean **M**odels **L**ink **O**perator **G**enerator.
 
 The only required input is a **single interactions file (.sif)** which describes the network topology.
 Using that file, we build a boolean model whose equations are based on the following **standardized format**:
